@@ -22,9 +22,9 @@
 #define vape_threshold 4       // отсечка затяжки, в секундах
 #define turbo_mode 0           // турбо режим 1 - включить, 0 - выключить
 #define battery_percent 0      // отображать заряд в процентах, 1 - включить, 0 - выключить
-#define battery_low 2.8        // нижний порог срабатывания защиты от переразрядки аккумулятора, в Вольтах!
+#define battery_low 3        // нижний порог срабатывания защиты от переразрядки аккумулятора, в Вольтах! (меньше 3 ардуно начнае не коррекно работать)
 //-----------------------------------НАСТРОЙКИ------------------------------------
-
+#include "GyverWDT.h"   // библиотека для сторожевого таймера
 #include <EEPROMex.h>   // библиотека для работы со внутренней памятью ардуино
 #include <LowPower.h>   // библиотека сна
 
@@ -163,6 +163,7 @@ void setup() {
     display.display();       
     delay(1000);
   }
+  Watchdog.enable(RESET_MODE, WDT_PRESCALER_1024);
 }
 
 void loop() {
@@ -511,6 +512,7 @@ void loop() {
   if (millis() - wake_timer > sleep_timer * 1000) {  // если кнопки не нажимались дольше чем sleep_timer секунд
     good_night();
   }
+  Watchdog.reset();
 } // конец loop
 
 //------функция, вызываемая при выходе из сна (прерывание)------
@@ -583,8 +585,10 @@ void wake_puzzle() {
   if (wake_status) {
     wake_up_flag = 0;
     display.clearDisplay();
+    Watchdog.enable(RESET_MODE, WDT_PRESCALER_1024);
   } else {
     display.clearDisplay();
+    Watchdog.disable();
     good_night();     // спать
   }
 }
@@ -608,6 +612,7 @@ void good_night() {
   delay(50);  
   digitalWrite(disp_vcc, LOW);    // подать 0 на все пины питания дисплея
   delay(50);  
+  Watchdog.disable();
   attachInterrupt(0, wake_up, FALLING);   // подключить прерывание для пробуждения 
   LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);    // спать. mode POWER_OFF, АЦП выкл
 }
